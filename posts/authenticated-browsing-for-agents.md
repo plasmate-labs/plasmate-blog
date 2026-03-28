@@ -119,12 +119,12 @@ Repeat for each site you want the agent to access.
 ### Fetching authenticated pages
 
 ```bash
-plasmate fetch https://twitter.com/home --profile default
-```
+PLASMATE_PROFILE=default
+ plasmate fetch https://twitter.com/home```
 
-The `--profile` flag tells Plasmate which cookie profile to inject. The output is a SOM document containing your authenticated Twitter timeline: posts, links, interactive elements (like, retweet, reply buttons), all structured for agent consumption.
+The `PLASMATE_PROFILE` environment variable tells Plasmate which cookie profile to inject. The output is a SOM document containing your authenticated Twitter timeline: posts, links, interactive elements (like, retweet, reply buttons), all structured for agent consumption.
 
-Without the `--profile` flag, Plasmate fetches the page as an anonymous visitor, which for Twitter means a login wall.
+Without the environment variable set, Plasmate fetches the page as an anonymous visitor, which for Twitter means a login wall.
 
 ## Real-world examples
 
@@ -135,14 +135,14 @@ Twitter is one of the most common authenticated browsing targets. Agents that mo
 ```bash
 # Push your Twitter cookies (do this once from the extension)
 # Then fetch your timeline:
-plasmate fetch https://x.com/home --profile default
-
+PLASMATE_PROFILE=default
+ plasmate fetch https://x.com/home
 # Fetch a specific user's profile:
-plasmate fetch https://x.com/elonmusk --profile default
-
+PLASMATE_PROFILE=default
+ plasmate fetch https://x.com/elonmusk
 # Fetch a specific tweet thread:
-plasmate fetch https://x.com/username/status/1234567890 --profile default
-```
+PLASMATE_PROFILE=default
+ plasmate fetch https://x.com/username/status/1234567890```
 
 The SOM output includes tweet text, author names, engagement metrics (when visible), embedded links, and interactive elements. An agent can process this structured output to summarize your timeline, extract trending topics, or find specific conversations.
 
@@ -155,7 +155,7 @@ Enterprise tools like Jira, Confluence, Notion, and internal wikis typically req
 ```bash
 # After pushing cookies for your Jira instance:
 plasmate fetch https://yourcompany.atlassian.net/browse/PROJ-123 \
-  --profile work
+  PLASMATE_PROFILE=work
 ```
 
 The agent receives the ticket details, status, assignee, description, and comments as structured SOM. This is especially useful for agents that triage issues, summarize sprint progress, or draft status updates.
@@ -163,7 +163,7 @@ The agent receives the ticket details, status, assignee, description, and commen
 ```bash
 # Confluence documentation:
 plasmate fetch https://yourcompany.atlassian.net/wiki/spaces/ENG/overview \
-  --profile work
+  PLASMATE_PROFILE=work
 ```
 
 ### Accessing paid content
@@ -172,11 +172,11 @@ News sites, research databases, and premium tools often gate content behind subs
 
 ```bash
 # Wall Street Journal article (behind paywall):
-plasmate fetch https://www.wsj.com/articles/some-article --profile news
-
+PLASMATE_PROFILE=news
+ plasmate fetch https://www.wsj.com/articles/some-article
 # Academic database:
-plasmate fetch https://ieeexplore.ieee.org/document/12345 --profile research
-```
+PLASMATE_PROFILE=research
+ plasmate fetch https://ieeexplore.ieee.org/document/12345```
 
 The agent sees the full article content, not the paywall teaser. This enables research agents to access the same sources you have paid for.
 

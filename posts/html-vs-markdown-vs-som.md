@@ -76,21 +76,19 @@ A structured JSON representation that preserves meaning and interactivity while 
 
 We measured input tokens across 50 web pages (news sites, documentation, e-commerce, government sites, social platforms). The differences are stark:
 
-| Format | Avg Input Tokens | vs HTML |
-|--------|------------------|---------|
-| HTML | 33,181 | 1.0x |
-| SOM | 8,301 | **4.0x fewer** |
-| Markdown | 4,542 | **7.3x fewer** |
+Token Cost Comparison:
+- HTML: 33,181 average input tokens (1.0x)
+- SOM: 8,301 average input tokens (4.0x fewer)
+- Markdown: 4,542 average input tokens (7.3x fewer)
 
 Markdown wins on raw token count, it strips everything. But tokens aren't the whole story.
 
 ### Cost Per 1,000 Pages (at $3/M input tokens)
 
-| Format | Cost | Savings vs HTML |
-|--------|------|-----------------|
-| HTML | $99.54 | baseline |
-| SOM | $24.90 | 75% |
-| Markdown | $13.63 | 86% |
+Cost Per 1,000 Pages (at $3/M input tokens):
+- HTML: $99.54 (baseline)
+- SOM: $24.90 (75% savings)
+- Markdown: $13.63 (86% savings)
 
 If you're just extracting text, Markdown is cheaper. But if your agent needs to *interact* with pages, click buttons, fill forms, navigate, Markdown falls apart.
 
@@ -102,11 +100,10 @@ Here's where it gets interesting. We expected Markdown to be fastest (fewest tok
 
 ### GPT-4o Latency (seconds)
 
-| Format | Avg Latency |
-|--------|-------------|
-| HTML | 2.7s |
-| Markdown | 1.9s |
-| SOM | **1.4s** |
+GPT-4o Latency (seconds):
+- HTML: 2.7s
+- Markdown: 1.9s
+- SOM: 1.4s (fastest)
 
 SOM beats both. Why? Two reasons:
 
@@ -115,11 +112,10 @@ SOM beats both. Why? Two reasons:
 
 ### Claude Sonnet 4 Latency (seconds)
 
-| Format | Avg Latency |
-|--------|-------------|
-| HTML | 16.2s |
-| **Markdown** | **25.2s** |
-| SOM | **8.5s** |
+Claude Sonnet 4 Latency (seconds):
+- HTML: 16.2s
+- Markdown: 25.2s (slowest)
+- SOM: 8.5s (fastest)
 
 Wait, Markdown is *slower* than HTML on Claude? Yes. And SOM is nearly 3x faster than Markdown.
 
@@ -133,13 +129,12 @@ Not all tasks are equal. We tested extraction, comparison, navigation, summariza
 
 ### HTML/SOM Token Ratio by Category
 
-| Category | HTML/SOM Ratio | Notes |
-|----------|----------------|-------|
-| Extraction | 2.2x | SOM wins, but margin is smaller |
-| Comparison | 3.9x | Multi-item pages benefit from structure |
-| Summarization | 3.9x | Similar to comparison |
-| Navigation | **5.4x** | Interactivity data is dense in SOM |
-| Adversarial | **6.0x** | Anti-bot clutter inflates HTML massively |
+HTML/SOM Token Ratio by Category:
+- Extraction: 2.2x (SOM wins, but margin is smaller)
+- Comparison: 3.9x (Multi-item pages benefit from structure)
+- Summarization: 3.9x (Similar to comparison)
+- Navigation: 5.4x (Interactivity data is dense in SOM)
+- Adversarial: 6.0x (Anti-bot clutter inflates HTML massively)
 
 For adversarial pages (cookie banners, heavy JavaScript, ad-filled layouts), HTML explodes with noise while SOM stays lean. The 6x ratio means you're paying 6x more for HTML on the hardest pages.
 

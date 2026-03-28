@@ -58,7 +58,7 @@ Install Plasmate and fetch your homepage:
 ```bash
 npm install -g plasmate
 
-plasmate fetch https://your-site.com --format json > som.json
+plasmate fetch https://your-site.com > som.json
 ```
 
 Examine the output to verify it captures your content correctly:
@@ -112,7 +112,7 @@ Add the SOM generation to your build pipeline so the representation stays curren
 
 ```bash
 # In your CI/CD script or Makefile
-plasmate fetch https://your-site.com --format json > public/.well-known/som.json
+plasmate fetch https://your-site.com > public/.well-known/som.json
 ```
 
 For sites deployed on Vercel, Netlify, or Cloudflare Pages, add this as a post-build step.
@@ -129,7 +129,7 @@ If your site has a known set of important pages (homepage, about, pricing, docs)
 PAGES="https://your-site.com https://your-site.com/about https://your-site.com/pricing"
 for url in $PAGES; do
   slug=$(echo "$url" | sed 's|https://your-site.com||' | sed 's|/|_|g')
-  plasmate fetch "$url" --format json > "public/.well-known/som${slug}.json"
+  plasmate fetch "$url" > "public/.well-known/som${slug}.json"
 done
 ```
 
@@ -157,7 +157,7 @@ app.get('/.well-known/som.json', (req, res) => {
 
   try {
     const som = execSync(
-      `plasmate fetch "${pageUrl}" --format json`,
+      `plasmate fetch "${pageUrl}"`,
       { timeout: 15000, encoding: 'utf-8' }
     );
     somCache.set(pageUrl, { data: som, time: Date.now() });

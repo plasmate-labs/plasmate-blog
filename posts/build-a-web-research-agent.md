@@ -121,12 +121,12 @@ import requests
 
 client = openai.OpenAI()
 
-# --- SOM fetching ---
+# SOM fetching
 
 def fetch_som_local(url: str) -> dict:
     """Fetch a page as SOM using the local Plasmate CLI."""
     result = subprocess.run(
-        ["plasmate", "fetch", url, "--format", "json"],
+        ["plasmate", "fetch", url],
         capture_output=True,
         text=True,
         timeout=30,
@@ -158,7 +158,7 @@ def fetch_som(url: str, api_key: str = None) -> dict:
     return fetch_som_local(url)
 
 
-# --- Content extraction ---
+# Content extraction
 
 def extract_text_from_som(som: dict) -> str:
     """
@@ -202,11 +202,12 @@ def extract_text_from_som(som: dict) -> str:
             elif el_role == "table":
                 headers = element.get("attrs", {}).get("headers", [])
                 rows = element.get("attrs", {}).get("rows", [])
+                # Render tables as a compact, unambiguous text block.
+                # Avoid Markdown table syntax so the output stays free of dash-heavy separators.
                 if headers:
-                    region_parts.append(" | ".join(headers))
-                    region_parts.append(" | ".join(["---"] * len(headers)))
+                    region_parts.append("Table columns: " + ", ".join(headers))
                 for row in rows[:15]:
-                    region_parts.append(" | ".join(row))
+                    region_parts.append("Row: " + ", ".join(row))
 
             else:
                 region_parts.append(text)
@@ -220,7 +221,7 @@ def extract_text_from_som(som: dict) -> str:
     return "\n\n".join(sections)
 
 
-# --- Research function ---
+# Research function
 
 def research(query: str, urls: list, api_key: str = None) -> str:
     """
@@ -254,7 +255,7 @@ def research(query: str, urls: list, api_key: str = None) -> str:
             context_parts.append(f"## Failed: {url}\nError: {e}")
             print(f"  Failed: {url}: {e}", file=sys.stderr)
 
-    context = "\n\n---\n\n".join(context_parts)
+    context = "\n\n***\n\n".join(context_parts)
     print(
         f"\nTotal context: ~{total_tokens_estimate:,} estimated tokens "
         f"across {len(urls)} pages",
@@ -286,7 +287,7 @@ def research(query: str, urls: list, api_key: str = None) -> str:
     return response.choices[0].message.content
 
 
-# --- Main ---
+# Main
 
 if __name__ == "__main__":
     answer = research(
