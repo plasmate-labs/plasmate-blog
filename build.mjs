@@ -139,8 +139,10 @@ function layout(title, description, content, extra = '') {
     a:hover { text-decoration: underline; }
 
     nav { position: sticky; top: 0; z-index: 100; background: rgba(17,17,16,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--smoke); padding: 0 2rem; height: 52px; display: flex; align-items: center; justify-content: space-between; }
-    nav .logo { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; color: var(--white); display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+    nav .logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--white); }
     nav .logo img { height: 22px; width: auto; }
+    nav .logo .wordmark { font-family: var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; font-size: 14px; }
+    nav .logo .blog-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.02em; margin-left: 0.2rem; }
     nav .links { display: flex; gap: 1.2rem; }
     nav .links a { color: var(--muted); font-size: 0.82rem; }
     nav .links a:hover { color: var(--white); text-decoration: none; }
@@ -184,7 +186,7 @@ function layout(title, description, content, extra = '') {
 </head>
 <body>
   <nav>
-    <a href="/" class="logo"><img src="/images/plasmate-mark.png" alt="Plasmate"> Plasmate Blog</a>
+    <a href="/" class="logo"><img src="/images/plasmate-mark.png" alt="Plasmate"><span class="wordmark">Plasmate</span><span class="blog-label">Blog</span></a>
     <div class="links">
       <a href="/">Posts</a>
       <a href="/tags">Tags</a>
