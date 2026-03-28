@@ -4,57 +4,90 @@ slug: the-agentic-web
 date: 2026-03-21
 author: David Hurley
 author_url: https://timespent.xyz
-summary: "The web has served humans, then search engines, then APIs. AI agents are the fourth consumer -- and they have no format designed for them. Until now."
+summary: "The web has served humans, then search engines, then applications. AI agents are the fourth consumer, and they have no format designed for them. We propose three infrastructure primitives to fix this."
 tags: [agentic-web, web-standards, som, deep-dive, robots-txt]
 category: deep-dive
 ---
 
-The web is entering its fourth state.
+The web is entering its fourth state of consumption. Each prior state emerged when a new class of consumer arrived that the existing infrastructure could not serve well. Each time, the web adapted by adding a new layer.
 
-The first web was for **humans** reading pages in browsers. HTML was the format.
+In the first state, **browsers** consumed HTML and rendered visual pages for humans. The entire web stack was designed for this: HTML for structure, CSS for presentation, JavaScript for interactivity. The assumption was that a human would see the result on a screen.
 
-The second web was for **search engines** indexing pages for discovery. We got sitemaps, robots.txt, and structured data.
+In the second state, **search engines** needed to discover, index, and rank content. HTML alone was insufficient because crawlers do not render pages. Publishers responded with metadata layers: sitemaps declared page inventories, robots.txt defined crawl rules, and structured data formats (Schema.org, JSON-LD, OpenGraph) embedded machine-readable facts into HTML. Google, Bing, and other engines could now understand content without rendering it.
 
-The third web was for **applications** consuming data programmatically. We got REST APIs, GraphQL, and webhooks.
+In the third state, **applications** needed to consume web data programmatically. Rather than parsing HTML, applications called APIs. REST, GraphQL, and webhooks became the interface layer between services. No application developer would consider scraping a rendered HTML page to get data that could be served as JSON.
 
-The fourth web is for **AI agents** -- autonomous systems that browse, reason, and act on web content. And right now, they have no format designed for them.
+Now we are in the fourth state. **AI agents** browse the web autonomously. They read pages, reason about content, fill forms, click buttons, navigate multi-step workflows, and synthesize information across sources. They are not rendering pixels, not building an index, and not calling structured APIs. They are consuming page content as context for language model reasoning.
+
+The fourth consumer has arrived, and the web has not adapted.
 
 ## The publisher-agent conflict
 
-Publishers face a dilemma. AI agents are crawling their sites at an increasing rate. Some publishers block agents entirely (via robots.txt). Others tolerate the traffic but don't serve it well.
+The absence of a purpose-built layer for agents has created an adversarial dynamic between publishers and AI systems.
 
-Neither approach works long-term:
+### The blocking problem
 
-- **Blocking agents** cuts you off from the fastest-growing channel for content discovery
-- **Tolerating raw crawls** means every agent re-renders your page, re-extracts content, and wastes compute on both sides
+Many publishers have responded to increased agent traffic by blocking it. Large media organizations have updated their robots.txt files to disallow AI crawlers. Some have deployed aggressive bot detection that blocks headless browsers entirely.
 
-The missing option is **cooperative serving**: give agents a structured representation they can consume directly, without the overhead of rendering and extraction.
+This reaction is understandable. From a publisher's perspective, AI agents consume bandwidth and server resources without generating pageviews, ad impressions, or subscription conversions. The value exchange is asymmetric: the agent extracts content while the publisher bears the cost.
+
+But blocking is a losing strategy for both sides. Publishers who block agents cut themselves off from the fastest-growing channel for content discovery and distribution. As more users delegate information gathering to agents, sites that are invisible to agents will lose relevance.
+
+### The scraping problem
+
+Agents that are not blocked still face the problem of consuming raw HTML. Every agent that visits a page independently renders it, extracts content, and discards the rest. If 100 agents visit the same NYT article, that page is rendered 100 times, each time consuming compute on both the publisher's server and the agent's infrastructure.
+
+This is wasteful in the same way that having every search engine re-render every page would be wasteful. The web solved this for search engines by providing sitemaps and structured data. It has not yet solved it for agents.
+
+### The quality problem
+
+Agents that parse raw HTML produce inconsistent results. Different pages encode the same information in different HTML patterns. A product price might be in a `<span>`, a `<div>`, a `<meta>` tag, or generated by JavaScript. An agent must handle all these patterns, and the extraction is fragile. When a site redesigns, every agent's extraction logic breaks.
 
 ## Three infrastructure primitives
 
-We propose three building blocks for the agentic web:
+We propose three building blocks for the agentic web. Together, they provide a cooperative alternative to the blocking-and-scraping status quo.
 
-### 1. SOM (Semantic Object Model)
+### Primitive 1: The Semantic Object Model (SOM)
 
-A structured JSON representation of web pages designed for machine consumption. [SOM preserves meaning and interactivity](https://blog.plasmate.app/why-som-matters/) while stripping rendering noise.
+SOM is a structured JSON representation of web pages designed specifically for machine consumption. It preserves meaning and interactivity while stripping presentation noise.
 
-Publishers can serve SOM alongside HTML:
+A SOM document divides the page into semantic regions (navigation, main, header, footer, form, aside) and represents each content element with its semantic role, available actions, accessible name, and stable identifier. Interactive elements (links, buttons, form controls) are always preserved. Non-interactive elements are included based on a content budget that prioritizes the main region.
 
-```html
-<link rel="alternate" type="application/som+json"
-      href="/.well-known/som.json">
+SOM is not a new idea in isolation. It combines insights from accessibility (ARIA roles), structured data (typed elements), and content extraction (readability algorithms) into a single coherent format designed for agent consumption.
+
+The key properties that make SOM suitable for agents:
+
+**Token efficiency.** SOM averages 8,301 tokens per page versus 33,181 for HTML (4.0x reduction). On navigation-heavy pages, the ratio reaches 5.4x. On adversarial pages with heavy advertising and JavaScript, the ratio reaches 6.0x.
+
+**Explicit interactivity.** Every interactive element declares its available actions. An agent reading SOM knows immediately what it can click, type into, select from, and toggle. There is no inference required.
+
+**Stable identifiers.** Elements receive deterministic IDs that survive page refreshes. The same button on the same page always gets the same ID, enabling cross-session references.
+
+**Structure.** Semantic regions eliminate the need to scan entire pages. An agent that needs the main article content reads the `main` region. An agent that needs navigation reads the `navigation` region.
+
+The full specification is published at [SOM Spec v1.0](https://docs.plasmate.app/som-spec) and includes a JSON Schema for validation.
+
+### Primitive 2: Agent Web Protocol (AWP)
+
+AWP is a purpose-built protocol for agent-web interaction. It operates at the semantic level rather than the DOM level.
+
+Where Chrome DevTools Protocol (CDP) expresses interactions as DOM mutations and coordinate-based events ("dispatch mousedown at pixel 432, 218"), AWP expresses interactions as semantic intentions ("click the element with SOM ID e_a3f8b2c1d4e5" or "type 'hello' into the search field").
+
+This distinction matters because semantic interactions are more reliable, more portable, and more efficient than coordinate-based ones. A semantic "click the login button" survives page redesigns that move the button to a different position. A coordinate-based click does not.
+
+AWP defines seven MVP methods: navigate, get_som, click, type, select, scroll, and wait. Each operates on SOM element references rather than DOM selectors. The protocol supports WebAssembly skill extensibility for custom interaction patterns.
+
+The full specification is at [AWP Documentation](https://docs.plasmate.app/awp).
+
+### Primitive 3: Cooperative robots.txt
+
+The third primitive extends robots.txt to support cooperative content negotiation between publishers and agents.
+
+Today, robots.txt is binary: allow or disallow. A publisher can block a crawler entirely or allow it entirely. There is no middle ground.
+
+We propose adding directives that let publishers declare SOM endpoints:
+
 ```
-
-### 2. Agent Web Protocol (AWP)
-
-A purpose-built protocol for agent-web interaction. Where CDP (Chrome DevTools Protocol) was designed for debugging browsers, AWP is designed for agents performing tasks. It operates at the semantic level -- "click the login button" rather than "dispatch mousedown at coordinates (432, 218)."
-
-### 3. Cooperative robots.txt
-
-An extension to robots.txt that lets publishers declare SOM endpoints:
-
-```
-# Traditional bot directives
 User-agent: *
 Disallow: /admin/
 
@@ -64,53 +97,102 @@ SOM-Version: 1.0
 Agent-Contact: webmaster@example.com
 ```
 
-This gives publishers explicit control over how agents consume their content, rather than the binary "allow all" or "block all" of today.
+A publisher who adds these directives is saying: "I welcome agent access, and here is the structured representation I prefer you consume." This is better for publishers (reduced crawl load, controlled content presentation) and better for agents (structured input, explicit permission).
+
+The proposal builds on RFC 9309 (the modern robots.txt specification) and is designed to be backward-compatible. Crawlers that do not understand SOM directives simply ignore them.
+
+The full proposal is at [Robots.txt for the Agentic Web](https://docs.plasmate.app/robots-txt-proposal).
 
 ## What SOM-first publishing looks like
 
-A publisher who adopts SOM-first serving:
+A publisher who adopts SOM-first serving follows four steps:
 
-1. Runs Plasmate on their pages (or generates SOM from their CMS)
-2. Publishes `/.well-known/som.json` with the SOM representation
-3. Adds the `<link rel="alternate">` tag to their HTML
-4. Optionally adds `SOM-Endpoint` to robots.txt
+**Step 1:** Generate a SOM representation of each page using Plasmate or any SOM-compliant producer.
 
-Agents that understand SOM can fetch the structured representation directly. Traditional browsers see no change. Search engines continue indexing HTML normally.
+**Step 2:** Publish the SOM at the well-known path `/.well-known/som.json`.
 
-Six properties already serve SOM alternates today:
+**Step 3:** Add a discovery tag to the HTML `<head>`:
 
-- [plasmate.app](https://plasmate.app)
-- [docs.plasmate.app](https://docs.plasmate.app)
-- [plasmatelabs.com](https://plasmatelabs.com)
-- [somordom.com](https://somordom.com)
-- [betterbrowser.ai](https://betterbrowser.ai)
-- [cache.plasmate.app](https://cache.plasmate.app)
+```html
+<link rel="alternate" type="application/som+json"
+      href="/.well-known/som.json">
+```
+
+**Step 4 (optional):** Declare the endpoint in robots.txt:
+
+```
+SOM-Endpoint: /.well-known/som.json
+SOM-Version: 1.0
+```
+
+Agents that understand SOM check for these signals and fetch the structured representation directly, bypassing HTML rendering entirely. Traditional browsers see no change. Search engines continue indexing HTML normally.
+
+Six properties already serve SOM alternates: plasmate.app, docs.plasmate.app, plasmatelabs.com, somordom.com, betterbrowser.ai, and cache.plasmate.app.
 
 ## The economics
 
-For publishers, SOM-first serving reduces agent crawl load. Instead of every agent rendering your page and extracting content independently, they fetch a cached SOM file.
+### For publishers
 
-For agent developers, SOM reduces token cost (4x vs HTML), improves latency (faster than both HTML and Markdown), and provides reliable structure for interaction tasks.
+SOM-first serving reduces agent-driven server load. Instead of every agent rendering the full page (executing JavaScript, loading assets, waiting for dynamic content), they fetch a single JSON file. For a publisher receiving thousands of agent requests per day, this translates to measurable infrastructure savings.
 
-For the web, cooperative serving is better than the adversarial status quo where publishers block agents and agents circumvent blocks.
+Publishers also gain control. Rather than letting every agent interpret their HTML however it wishes, publishers declare the canonical semantic representation. This is analogous to how Schema.org gives publishers control over how search engines interpret their content.
 
-## Research
+### For agent developers
 
-We've published five papers exploring these ideas:
+SOM reduces costs at every layer. Input tokens drop by 4x on average. Latency drops (8.5s for SOM versus 16.2s for HTML and 25.2s for Markdown on Claude Sonnet 4). Extraction reliability improves because the format is structured rather than heuristic.
 
-- **Paper 1:** [The Semantic Object Model](https://timespent.xyz/papers) -- token efficiency evaluation
-- **Paper 2:** [The Agentic Web](https://timespent.xyz/papers) -- infrastructure primitives proposal
-- **Paper 3:** [Agent Web Protocol](https://timespent.xyz/papers) -- protocol specification
-- **Paper 4:** [Cooperative Content Negotiation](https://timespent.xyz/papers) -- robots.txt extension proposal
-- **Paper 5:** [Does Format Matter?](https://timespent.xyz/papers) -- WebTaskBench task-completion benchmark
+For systems running at scale (monitoring hundreds of pages, serving thousands of users, or orchestrating multi-agent workflows), the savings compound quickly.
+
+### For the ecosystem
+
+The cooperative model is better than the adversarial one. Publishers serving SOM are explicitly welcoming agent access on their terms. Agents consuming SOM are doing so through a sanctioned channel. The blocking-and-circumvention arms race becomes unnecessary.
+
+## The missing piece: incentives and payment flows
+
+Representation and protocols solve technical problems, but the web is also an economy. If the agentic web is going to be stable, it needs incentive-compatible defaults.
+
+Publishers want to be read, cited, and paid. Agent developers want low latency access to high quality information. Users want outcomes, not ten tabs and a pile of links.
+
+The current pattern, agents scraping raw HTML until they get blocked, creates bad incentives on both sides. Publishers see traffic without value. Agents see friction and respond with more aggressive scraping tactics.
+
+SOM-first publishing creates a surface where more nuanced relationships are possible:
+
+- A publisher can provide a public SOM endpoint for non-sensitive pages, with explicit caching and freshness guidance. That reduces load while keeping access open.
+- A publisher can offer a paid or authenticated endpoint for higher freshness, richer metadata, or higher request volume. This looks like an API tier, but the resource is the web content itself.
+- A publisher can require agent identification and contact signals, so there is a path for abuse reporting and negotiated access.
+
+This matters for small publishers as much as large ones. A small documentation site may never build a full API. Publishing a SOM alternate is a lightweight step that still makes agent consumption cheaper and more controllable.
+
+The point is not that every site should charge agents. The point is that the web needs an explicit, technical place where terms can be expressed and respected. Without that, the default becomes adversarial.
+
+## Research foundation
+
+We have published five papers exploring these ideas in depth:
+
+1. **The Semantic Object Model** (Paper 1) evaluates SOM compression across 100 real websites and establishes the token efficiency baseline.
+
+2. **The Agentic Web** (Paper 2) articulates the infrastructure vision and proposes the three primitives described here.
+
+3. **Agent Web Protocol** (Paper 3) provides the full technical specification for AWP, including all seven MVP methods and comparison with CDP.
+
+4. **Cooperative Content Negotiation** (Paper 4) details the robots.txt extension proposal with security considerations and an adoption pathway.
+
+5. **Does Format Matter?** (Paper 5) reports WebTaskBench results comparing HTML, Markdown, and SOM across GPT-4o and Claude Sonnet 4 on 100 tasks.
 
 All papers are available at [timespent.xyz/papers](https://timespent.xyz/papers).
 
-## Get involved
+We are also participating in the [W3C Web Content for Browser and AI Community Group](https://www.w3.org/community/web-content-browser-ai/) to work toward formal web standards.
 
-- [GitHub](https://github.com/plasmate-labs/plasmate) -- Star the repo, file issues, contribute
-- [SOM Spec](https://docs.plasmate.app/som-spec) -- Read the specification
-- [SOM-first guide](https://docs.plasmate.app/som-first-sites) -- Publish SOM on your site
-- [W3C Community Group](https://www.w3.org/community/web-content-browser-ai/) -- Join the standards conversation
+## Getting involved
 
-The web wasn't built for machines. We're adding that layer now.
+The agentic web is not something one company builds alone. It requires adoption by publishers, agent developers, browser vendors, and standards bodies.
+
+If you build AI agents, try SOM. Install Plasmate (`npm install -g plasmate`) and compare the output to what your agent currently receives.
+
+If you publish web content, consider serving a SOM alternate. The setup takes five minutes and benefits every agent that visits your site.
+
+If you work on web standards, review the specifications and proposals. The SOM Spec, AWP Spec, and robots.txt proposal are all published openly for comment.
+
+The web was not built for machines. We are adding that layer now.
+
+[GitHub](https://github.com/plasmate-labs/plasmate) | [Documentation](https://docs.plasmate.app) | [SOM Spec](https://docs.plasmate.app/som-spec) | [W3C Community Group](https://www.w3.org/community/web-content-browser-ai/) | [Research Papers](https://timespent.xyz/papers)

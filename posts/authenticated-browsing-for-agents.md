@@ -4,97 +4,231 @@ slug: authenticated-browsing-for-agents
 date: 2026-03-24
 author: David Hurley
 author_url: https://timespent.xyz
-summary: "Your AI agent needs to browse sites you're logged into -- Twitter, LinkedIn, internal tools. Here is how Plasmate handles authenticated sessions securely."
+summary: "Your AI agent needs to browse sites you are logged into. Twitter, LinkedIn, internal tools. Here is how Plasmate handles authenticated sessions without sharing passwords."
 tags: [tutorial, authentication, cookies, ai-agents]
 category: tutorial
 ---
 
-Your agent needs to read your Twitter feed. Or check your Jira board. Or browse an internal wiki. But these pages require login, and you (correctly) don't want to give your agent your password.
+Your AI agent needs to read your Twitter feed, check your Jira board, browse an internal wiki, or monitor a competitor's pricing page that requires login. These are common agent tasks, but they all require authenticated access to web content.
 
-Plasmate solves this with cookie-based authenticated browsing. Your real browser session stays secure -- the agent just borrows the cookies it needs.
+The naive approach is to give the agent your username and password. This is a terrible idea for obvious reasons: credential exposure, session conflicts, two-factor authentication challenges, and the fundamental insecurity of storing plaintext credentials in an agent's configuration.
 
-## How it works
+The better approach is to let the agent borrow your existing browser session. You are already logged in. Your browser already has valid cookies. The agent just needs access to those cookies, securely and with your explicit control.
 
-1. You install the Plasmate browser extension in Chrome
-2. The extension encrypts your cookies and sends them to a local bridge server (127.0.0.1 only -- never leaves your machine)
-3. Plasmate uses those cookies when fetching pages, so it sees the same logged-in content you do
-4. Cookies are stored in encrypted profiles, not plain text
+Plasmate implements this through a cookie-based authenticated browsing system: a browser extension that exports cookies, a local bridge server that receives them, and encrypted cookie profiles that the headless browser uses when fetching pages.
 
-No passwords are shared. No OAuth flows to configure. If you're logged into a site in Chrome, your agent can see it too.
+## Architecture overview
 
-## Setup
+The authenticated browsing system has four components:
 
-### 1. Install the extension
+### 1. The browser extension
 
-Get the [Plasmate browser extension](https://github.com/plasmate-labs/plasmate-extension) from the Chrome Web Store or build from source.
+The [Plasmate browser extension](https://github.com/plasmate-labs/plasmate-extension) runs in your Chrome (or Chromium-based) browser. When you click "Push cookies for this site," it reads the cookies for the current domain and sends them to the bridge server.
 
-### 2. Start the auth bridge
+The extension does not read all your cookies. It only sends cookies for the specific site you authorize. You decide which domains the agent can access.
+
+### 2. The bridge server
+
+The bridge server (`plasmate auth serve`) runs locally on your machine. It listens on `127.0.0.1:9876` and receives encrypted cookie payloads from the extension.
+
+The critical security property: the bridge server binds to localhost only. It never listens on a network interface. No one on your LAN, your VPN, or the internet can connect to it. The cookies never leave your machine unless you explicitly use a remote deployment (in which case you control the transport).
+
+### 3. Encrypted cookie profiles
+
+Cookies received by the bridge are encrypted with AES-256 and stored in named profiles. A profile is a collection of cookies for one or more domains, associated with a label you choose.
+
+You might have a "personal" profile with your Twitter and Gmail cookies, a "work" profile with your Jira and Confluence cookies, and a "research" profile with your paid news site subscriptions.
+
+Profiles are stored on disk in encrypted form. The encryption key is derived from your system keychain on macOS, from the credential store on Windows, or from an environment variable on Linux.
+
+### 4. The headless browser
+
+When Plasmate fetches a URL with a profile specified, it loads the relevant cookies into the headless browser's cookie jar before navigating. The page loads as if you were browsing it yourself: your login session is active, your preferences are applied, and personalized content is rendered.
+
+The SOM output then includes the authenticated page content.
+
+## Step by step setup
+
+### Installing the extension
+
+The Plasmate browser extension is available from the [Chrome Web Store](https://github.com/plasmate-labs/plasmate-extension) or can be built from source:
+
+```bash
+git clone https://github.com/plasmate-labs/plasmate-extension
+cd plasmate-extension
+npm install && npm run build
+```
+
+Then load the `dist/` directory as an unpacked extension in Chrome via `chrome://extensions` with Developer Mode enabled.
+
+### Starting the bridge server
 
 ```bash
 plasmate auth serve
 ```
 
-This starts a local server on `127.0.0.1:9876` that receives encrypted cookies from the extension. It binds to localhost only -- nothing is exposed to the network.
+This starts the bridge on `127.0.0.1:9876`. The terminal shows a log of incoming cookie pushes:
 
-### 3. Push cookies from your browser
+```
+[auth] Bridge listening on 127.0.0.1:9876
+[auth] Received cookies for twitter.com (profile: default, 14 cookies)
+[auth] Received cookies for jira.atlassian.net (profile: work, 8 cookies)
+```
 
-Click the Plasmate extension icon and select "Push cookies for this site." The extension sends an encrypted cookie snapshot to the bridge.
+Leave this running in a terminal tab or run it in the background:
 
-### 4. Fetch authenticated pages
+```bash
+plasmate auth serve &
+```
+
+### Pushing cookies from your browser
+
+1. Navigate to a site you are logged into (for example, twitter.com)
+2. Click the Plasmate extension icon in Chrome's toolbar
+3. Select the profile to store these cookies in (default is "default")
+4. Click "Push cookies for this site"
+
+The extension sends the cookies for the current domain to the bridge. You will see a confirmation in the extension popup and in the bridge server's terminal output.
+
+Repeat for each site you want the agent to access.
+
+### Fetching authenticated pages
 
 ```bash
 plasmate fetch https://twitter.com/home --profile default
 ```
 
-The `--profile` flag tells Plasmate which cookie profile to use. You can create separate profiles for different accounts or contexts.
+The `--profile` flag tells Plasmate which cookie profile to inject. The output is a SOM document containing your authenticated Twitter timeline: posts, links, interactive elements (like, retweet, reply buttons), all structured for agent consumption.
 
-## Security model
+Without the `--profile` flag, Plasmate fetches the page as an anonymous visitor, which for Twitter means a login wall.
 
-- Cookies are **AES-256 encrypted** at rest
-- The bridge server binds to **127.0.0.1 only** -- no network exposure
-- Cookie profiles are **per-machine** -- they don't sync or upload anywhere
-- You control **which sites** to push cookies for -- the extension doesn't auto-export everything
+## Real-world examples
 
-## Example: Agent browses X/Twitter
+### Browsing X/Twitter as yourself
+
+Twitter is one of the most common authenticated browsing targets. Agents that monitor feeds, track mentions, or research conversations need access to the logged-in experience.
 
 ```bash
-# Start the bridge
-plasmate auth serve &
-
-# Push your Twitter cookies (from the extension)
-# Then fetch your feed:
+# Push your Twitter cookies (do this once from the extension)
+# Then fetch your timeline:
 plasmate fetch https://x.com/home --profile default
 
-# The agent sees your personalized timeline as SOM
+# Fetch a specific user's profile:
+plasmate fetch https://x.com/elonmusk --profile default
+
+# Fetch a specific tweet thread:
+plasmate fetch https://x.com/username/status/1234567890 --profile default
 ```
 
-The SOM output includes your feed's posts, links, and interactive elements (like, retweet, reply buttons) -- structured for agent consumption.
+The SOM output includes tweet text, author names, engagement metrics (when visible), embedded links, and interactive elements. An agent can process this structured output to summarize your timeline, extract trending topics, or find specific conversations.
 
-## Example: Internal tools
+A detailed walkthrough is available in the [Your Agent on X/Twitter](https://docs.plasmate.app/guide-agent-browses-twitter) guide.
+
+### Monitoring internal tools
+
+Enterprise tools like Jira, Confluence, Notion, and internal wikis typically require authentication. Rather than configuring OAuth applications or API tokens for each service, push your browser cookies:
 
 ```bash
-# Push cookies for your company's Jira
-# Then:
+# After pushing cookies for your Jira instance:
 plasmate fetch https://yourcompany.atlassian.net/browse/PROJ-123 \
   --profile work
 ```
 
-The agent gets the ticket details, assignee, status, comments -- without needing Jira API credentials or OAuth setup.
+The agent receives the ticket details, status, assignee, description, and comments as structured SOM. This is especially useful for agents that triage issues, summarize sprint progress, or draft status updates.
 
-## When to use this vs API access
+```bash
+# Confluence documentation:
+plasmate fetch https://yourcompany.atlassian.net/wiki/spaces/ENG/overview \
+  --profile work
+```
 
-| Approach | Best for |
-|----------|----------|
-| Authenticated browsing | Quick access to any logged-in site. No API key needed. |
-| Official APIs | Production workflows. Rate limits. Structured data. |
-| SOM Cache | Public pages. No auth needed. Fastest. |
+### Accessing paid content
 
-Authenticated browsing is ideal for personal agents and prototyping. For production systems serving many users, prefer official APIs where available.
+News sites, research databases, and premium tools often gate content behind subscriptions. If you have a valid subscription and are logged in:
 
----
+```bash
+# Wall Street Journal article (behind paywall):
+plasmate fetch https://www.wsj.com/articles/some-article --profile news
 
-**Full guide:** [Authenticated Browsing](https://docs.plasmate.app/guide-authenticated-browsing)
+# Academic database:
+plasmate fetch https://ieeexplore.ieee.org/document/12345 --profile research
+```
 
-**Non-technical guide:** [Your Agent on X/Twitter](https://docs.plasmate.app/guide-agent-browses-twitter)
+The agent sees the full article content, not the paywall teaser. This enables research agents to access the same sources you have paid for.
 
-[GitHub](https://github.com/plasmate-labs/plasmate) -- [Extension](https://github.com/plasmate-labs/plasmate-extension)
+## Security model in detail
+
+### What is encrypted
+
+Cookie values are encrypted with AES-256-GCM before being written to disk. The encryption key is derived from your system keychain (macOS Keychain, Windows Credential Manager) or a user-provided key via the `PLASMATE_AUTH_KEY` environment variable.
+
+The cookie file on disk is not readable without the encryption key. If someone copies your profile file, they cannot extract cookies from it.
+
+### What is not shared
+
+The extension does not export all cookies from your browser. It only exports cookies for the specific domain you authorize, at the moment you click "Push." It does not run in the background. It does not auto-sync. It does not phone home.
+
+The bridge server does not listen on any network interface. It binds to `127.0.0.1` only. There is no remote access, no cloud sync, and no telemetry.
+
+### Cookie expiration
+
+Cookies have natural expiration dates set by the issuing site. When a session cookie expires, the agent's access expires with it. You need to push fresh cookies from your browser to maintain access.
+
+For sites with short session lifetimes (30 minutes to a few hours), you may need to re-push cookies periodically. For sites with persistent sessions (days to weeks), the initial push is often sufficient for extended use.
+
+### Profile isolation
+
+Each profile is an independent cookie store. Cookies in your "work" profile are not visible when fetching with your "personal" profile, and vice versa. This prevents cross-contamination between contexts.
+
+## When to use each authentication approach
+
+Different agent tasks call for different authentication strategies:
+
+| Approach | Best for | Trade-offs |
+|----------|----------|------------|
+| Cookie-based auth (Plasmate profiles) | Personal agents, rapid prototyping, sites without APIs | Requires periodic cookie refresh; tied to your session |
+| API tokens (OAuth, PATs) | Production systems, multi-user agents | Requires API availability; rate limits apply |
+| Service accounts | Enterprise deployments, CI/CD agents | Requires admin provisioning; separate identity |
+| No auth (public pages) | Public content, search results | Limited to publicly accessible content |
+
+Cookie-based authentication is ideal for personal agent workflows where you want the agent to see what you see. It requires no API configuration, works with any site that uses cookie-based sessions, and can be set up in minutes.
+
+For production systems that serve multiple users, API-based authentication is more appropriate. Each user authenticates through proper OAuth flows, and the agent acts on their behalf with scoped permissions.
+
+## Troubleshooting
+
+### "Page shows login wall despite profile"
+
+The cookies may have expired. Open the site in your browser, verify you are still logged in, and push fresh cookies.
+
+### "Bridge server refuses connection"
+
+Verify the bridge is running: `plasmate auth serve`. Check that nothing else is using port 9876: `lsof -i :9876`.
+
+### "Extension does not show the Push button"
+
+Make sure you are on an HTTPS page (the extension does not operate on HTTP pages for security). Verify the extension is enabled in `chrome://extensions`.
+
+### "Cookies work for the homepage but not inner pages"
+
+Some sites set different cookies for different subdomains. Push cookies while on the specific page you want the agent to access, not just the homepage.
+
+## Privacy considerations
+
+Authenticated browsing gives your agent access to personal content. Consider these guidelines:
+
+Keep profiles scoped. Do not push cookies for sensitive accounts (banking, healthcare) into profiles that are used for casual browsing tasks.
+
+Review what you share. Before pushing cookies for a domain, consider whether the agent needs access to all the content on that domain.
+
+Rotate profiles. Periodically delete old profiles and re-push only the cookies you currently need.
+
+Understand the scope. Cookie-based access gives the agent the same permissions as your browser session. If your browser can delete emails, your agent can too (if it is instructed to). Use caution with profiles for accounts that have write access to important systems.
+
+## Further reading
+
+The complete technical documentation for authenticated browsing is at [Authenticated Browsing Guide](https://docs.plasmate.app/guide-authenticated-browsing).
+
+A non-technical walkthrough focused on Twitter/X is at [Your Agent on X/Twitter](https://docs.plasmate.app/guide-agent-browses-twitter).
+
+[GitHub](https://github.com/plasmate-labs/plasmate) | [Browser Extension](https://github.com/plasmate-labs/plasmate-extension) | [Documentation](https://docs.plasmate.app)
