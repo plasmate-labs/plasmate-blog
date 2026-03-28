@@ -12,9 +12,9 @@ canonical_url: https://blog.plasmate.app/html-vs-markdown-vs-som/
 
 Every AI agent that browses the web faces the same question: how do you represent a web page to a language model?
 
-The default answer -- raw HTML -- is expensive and slow. A typical page dumps 30,000+ tokens into your context window, most of it CSS classes and layout divs. But what are the actual alternatives? And do they work?
+The default answer, raw HTML, is expensive and slow. A typical page dumps 30,000+ tokens into your context window, most of it CSS classes and layout divs. But what are the actual alternatives? And do they work?
 
-We ran WebTaskBench -- 100 tasks across GPT-4o and Claude Sonnet 4 -- to find out. The results surprised us.
+We ran WebTaskBench, 100 tasks across GPT-4o and Claude Sonnet 4, to find out. The results surprised us.
 
 ---
 
@@ -82,17 +82,17 @@ We measured input tokens across 50 web pages (news sites, documentation, e-comme
 | SOM | 8,301 | **4.0x fewer** |
 | Markdown | 4,542 | **7.3x fewer** |
 
-Markdown wins on raw token count -- it strips everything. But tokens aren't the whole story.
+Markdown wins on raw token count, it strips everything. But tokens aren't the whole story.
 
 ### Cost Per 1,000 Pages (at $3/M input tokens)
 
 | Format | Cost | Savings vs HTML |
 |--------|------|-----------------|
-| HTML | $99.54 | -- |
+| HTML | $99.54 | baseline |
 | SOM | $24.90 | 75% |
 | Markdown | $13.63 | 86% |
 
-If you're just extracting text, Markdown is cheaper. But if your agent needs to *interact* with pages -- click buttons, fill forms, navigate -- Markdown falls apart.
+If you're just extracting text, Markdown is cheaper. But if your agent needs to *interact* with pages, click buttons, fill forms, navigate, Markdown falls apart.
 
 ---
 
@@ -121,7 +121,7 @@ SOM beats both. Why? Two reasons:
 | **Markdown** | **25.2s** |
 | SOM | **8.5s** |
 
-Wait -- Markdown is *slower* than HTML on Claude? Yes. And SOM is nearly 3x faster than Markdown.
+Wait, Markdown is *slower* than HTML on Claude? Yes. And SOM is nearly 3x faster than Markdown.
 
 Claude appears to struggle with ambiguous Markdown when the task requires understanding page structure. The model spends more time reasoning about what elements are clickable, what actions are available, and how to express those actions. With SOM, that information is explicit.
 
@@ -230,8 +230,8 @@ All numbers in this post come from [WebTaskBench](https://github.com/plasmate-la
 
 ## Further Reading
 
-- [SOM Spec v1.0](https://docs.plasmate.app/som-spec) -- The complete specification
-- [SOM-first Websites](https://docs.plasmate.app/som-first-sites) -- How publishers can serve SOM natively
-- [LangChain integration](https://github.com/plasmate-labs/langchain-plasmate) -- Use SOM in LangChain pipelines
-- [GitHub](https://github.com/plasmate-labs/plasmate) -- Star us if this was useful
-- [npm](https://www.npmjs.com/package/plasmate) -- `npm install -g plasmate`
+- [SOM Spec v1.0](https://docs.plasmate.app/som-spec), The complete specification
+- [SOM-first Websites](https://docs.plasmate.app/som-first-sites), How publishers can serve SOM natively
+- [LangChain integration](https://github.com/plasmate-labs/langchain-plasmate), Use SOM in LangChain pipelines
+- [GitHub](https://github.com/plasmate-labs/plasmate), Star us if this was useful
+- [npm](https://www.npmjs.com/package/plasmate), `npm install -g plasmate`
