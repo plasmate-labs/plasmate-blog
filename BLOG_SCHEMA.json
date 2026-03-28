@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Plasmate Blog Post Frontmatter",
+  "description": "Schema for blog post YAML frontmatter. Bots and humans must conform to this schema when creating posts.",
+  "type": "object",
+  "required": ["title", "slug", "date", "author", "summary", "tags", "category"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Post title",
+      "minLength": 10,
+      "maxLength": 120
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL slug (lowercase, hyphens only, must match filename)",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    },
+    "date": {
+      "type": "string",
+      "description": "Publication date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author display name"
+    },
+    "author_url": {
+      "type": "string",
+      "description": "Author profile URL",
+      "format": "uri"
+    },
+    "summary": {
+      "type": "string",
+      "description": "1-2 sentence summary for list view and meta description",
+      "minLength": 20,
+      "maxLength": 300
+    },
+    "tags": {
+      "type": "array",
+      "description": "Lowercase tags",
+      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "category": {
+      "type": "string",
+      "description": "Post category",
+      "enum": ["research", "tutorial", "announcement", "deep-dive", "opinion"]
+    },
+    "image": {
+      "type": "string",
+      "description": "Social/OG image path relative to /public/images/"
+    },
+    "draft": {
+      "type": "boolean",
+      "description": "If true, post is excluded from build",
+      "default": false
+    },
+    "canonical_url": {
+      "type": "string",
+      "description": "Canonical URL if cross-posted elsewhere",
+      "format": "uri"
+    },
+    "series": {
+      "type": "string",
+      "description": "Series name for multi-part posts"
+    },
+    "series_order": {
+      "type": "integer",
+      "description": "Position within the series",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}
