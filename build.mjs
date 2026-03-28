@@ -186,7 +186,7 @@ function layout(title, description, content, extra = '') {
 </head>
 <body>
   <nav>
-    <a href="/" class="logo"><img src="/images/plasmate-mark.png" alt="Plasmate"><span class="wordmark">Plasmate</span><span class="blog-label">Blog</span></a>
+    <a href="/" class="logo"><img src="/images/plasmate-mark.png" alt="Plasmate"><span class="wordmark">Plasmate</span></a>
     <div class="links">
       <a href="/">Posts</a>
       <a href="/tags">Tags</a>

@@ -181,6 +181,73 @@ Instead of running Plasmate locally, register your site with the SOM Cache at ca
 
 This offloads all compute to the cache infrastructure. Agents that check your SOM endpoint get redirected to the cache.
 
+## CMS and framework integration notes
+
+Static and dynamic examples cover the concept, but many publishers run on frameworks and CMS platforms where the practical details live in plugins, middleware, and cache invalidation.
+
+### Next.js (App Router or Pages Router)
+
+If you already have a Next.js site, the easiest SOM endpoint is an API route that returns a cached JSON payload.
+
+A practical pattern:
+
+- Use a route handler at `app/.well-known/som.json/route.ts`.
+- Generate SOM in a background job or on deploy.
+- Store the JSON in an object store (S3, R2) or a KV cache.
+- In the route, return the stored blob with strong cache headers.
+
+The key is to avoid generating SOM on every request. Treat SOM generation like building a sitemap.
+
+### Cloudflare and edge caching
+
+If you serve through a CDN, push caching to the edge.
+
+- Set `Cache-Control: public, max-age=300, s-maxage=3600` as a default.
+- Add an ETag header so agents can revalidate cheaply.
+- Consider `stale-while-revalidate` if your CDN supports it.
+
+The core idea is that SOM is a shared representation. You want one cached object to serve many agent requests.
+
+### WordPress
+
+WordPress is a natural home for SOM-first support because it already has:
+
+- a publish workflow
+- a plugin ecosystem
+- established caching plugins
+
+A WordPress plugin can generate SOM whenever a post is published or updated. Store the SOM JSON in an object store or in post meta, then expose:
+
+- `/.well-known/som.json` as a site-level index or homepage SOM
+- `/som?post=<id>` as a per-post SOM endpoint
+
+If you already generate a sitemap, SOM generation can be inserted at the same points in the pipeline.
+
+### Headless CMS platforms
+
+If you run a headless CMS like Contentful or Sanity, you might already have a structured JSON representation of your content. That does not eliminate the need for SOM.
+
+CMS JSON describes your content model. SOM describes the rendered semantic surface an agent experiences, including:
+
+- navigation structure
+- cross-links and related content blocks
+- disclosure widgets, tabs, and other UI affordances
+- tables and callouts that are assembled at render time
+
+A strong approach is to expose both:
+
+- keep the CMS JSON for developers and integrations
+- publish SOM as the agent-friendly view of the rendered page
+
+### Validation and schema stability
+
+If you want third parties to build against your SOM endpoint, validate the output.
+
+- Keep required fields stable: page URL, title, regions, element ids, element roles.
+- Allow additive evolution: new optional fields should not break consumers.
+
+In practice this means treating SOM like an API contract. Version it, document it, and add tests that ensure you do not accidentally break consumers.
+
 ## Freshness and caching strategies
 
 Different types of content have different freshness requirements:
@@ -262,7 +329,7 @@ SOM-first publishing is one of three infrastructure primitives we propose for th
 2. **Agent Web Protocol (AWP)** provides the interaction protocol for agents to navigate and act on pages.
 3. **Cooperative robots.txt directives** provide the discovery and permission mechanism.
 
-Together, these replace the adversarial model (agents scraping, publishers blocking) with a cooperative model (publishers declaring endpoints, agents consuming structured content).
+Together, these replace the adversarial model (agents scraping, publishers blocking) with a cooperative model (publishers declaring endpoints, agents consuming structured content). The result is less wasted compute, lower crawl load, and a cleaner contract between machines and publishers.
 
 The detailed proposal is in our [robots.txt for the agentic web](https://docs.plasmate.app/robots-txt-proposal) documentation, and the full vision is described in [The Agentic Web](https://blog.plasmate.app/the-agentic-web/) blog post.
 

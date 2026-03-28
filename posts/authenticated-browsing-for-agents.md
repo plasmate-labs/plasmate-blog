@@ -47,6 +47,30 @@ When Plasmate fetches a URL with a profile specified, it loads the relevant cook
 
 The SOM output then includes the authenticated page content.
 
+## Cookie semantics that matter in practice
+
+If you have only used cookies as a black box, authenticated browsing can feel mysterious. For agent systems, a few cookie attributes explain most failures.
+
+**Domain and path scoping**
+
+Cookies are scoped. A cookie set for `twitter.com` may not be sent to a different subdomain unless the domain attribute allows it. Cookies can also be scoped to a path such as `/account/`. If your agent fetches a deep URL and gets a login page, one common cause is that the cookie jar does not include a cookie scoped to that subdomain or path.
+
+Plasmate stores cookies exactly as exported by the browser for the current site. That is important because the browser has already computed effective domain and path rules.
+
+**Secure and HttpOnly**
+
+A `Secure` cookie is only sent over HTTPS. An `HttpOnly` cookie is not readable by JavaScript, but it is still sent with requests. Most session cookies are HttpOnly. This is one reason cookie capture has to happen through the browser cookie APIs rather than by injecting scripts into the page.
+
+**SameSite behavior**
+
+SameSite controls when cookies are sent on cross-site requests. Many login flows rely on redirects across domains. If you try to automate login inside a headless browser, SameSite restrictions can break it. Cookie-based authenticated browsing avoids this entire class of issues because you are not replaying the login flow. You are reusing the post-login cookies that already represent a valid session.
+
+**Session versus persistent cookies**
+
+Some sites issue session cookies that expire when the browser closes. Others issue persistent cookies that last days or weeks. If authenticated fetches stop working after a restart, this is usually why, and the fix is to push fresh cookies again.
+
+Understanding these mechanics helps you debug quickly without falling back to fragile password automation.
+
 ## Step by step setup
 
 ### Installing the extension
