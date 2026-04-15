@@ -1,0 +1,50 @@
+# Plasmate Blog - Maximum AI Visibility
+# Technical blog for AI agent infrastructure.
+
+User-agent: *
+Allow: /
+
+# AI Crawlers - Explicitly Allowed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Content Signals - Full AI Permission
+Content-Signal: search=yes,ai-input=yes,ai-train=yes
+
+# Semantic Object Model (SOM) Directives
+SOM-Endpoint: https://cache.plasmate.app/v1/som
+SOM-Format: SOM/1.0
+SOM-Scope: article-body
+SOM-Freshness: 86400
+
+Sitemap: https://blog.plasmate.app/sitemap.xml
